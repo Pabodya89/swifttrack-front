@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, MapPin, Clock, AlertCircle, ChevronRight } from 'lucide-react';
+import { API_ENDPOINTS, apiCall } from '../config/api';
 
 const PackageSelection = ({ selectedPackages, onNext }) => {
   const [packages, setPackages] = useState([]);
@@ -9,72 +10,44 @@ const PackageSelection = ({ selectedPackages, onNext }) => {
   useEffect(() => {
     const loadPackages = async () => {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // simulate API delay
-
-      const mockPackages = [
-        {
-          id: 'PKG-001',
-          trackingNumber: 'ST2025001',
-          clientName: 'E-Mall Lanka',
-          recipientName: 'John Silva',
-          recipientAddress: '123 Galle Road, Colombo 03',
-          weight: 2.5,
-          status: 'Ready for Dispatch',
-          location: { zone: 'A', shelf: '12', position: '3' },
-          priority: 'High',
-          createdAt: new Date('2025-01-15T08:00:00'),
-        },
-        {
-          id: 'PKG-002',
-          trackingNumber: 'ST2025002',
-          clientName: 'TechStore LK',
-          recipientName: 'Priya Fernando',
-          recipientAddress: '456 Kandy Road, Peradeniya',
-          weight: 1.8,
-          status: 'Ready for Dispatch',
-          location: { zone: 'B', shelf: '08', position: '1' },
-          priority: 'Medium',
-          createdAt: new Date('2025-01-15T09:15:00'),
-        },
-        {
-          id: 'PKG-003',
-          trackingNumber: 'ST2025003',
-          clientName: 'Fashion Hub',
-          recipientName: 'Chamara Perera',
-          recipientAddress: '789 Main Street, Negombo',
-          weight: 0.8,
-          status: 'Ready for Dispatch',
-          location: { zone: 'A', shelf: '15', position: '7' },
-          priority: 'Low',
-          createdAt: new Date('2025-01-15T10:30:00'),
-        },
-        {
-          id: 'PKG-004',
-          trackingNumber: 'ST2025004',
-          clientName: 'Book Palace',
-          recipientName: 'Saman Ratnaike',
-          recipientAddress: '321 Temple Road, Mount Lavinia',
-          weight: 3.2,
-          status: 'Processing',
-          location: { zone: 'C', shelf: '05', position: '2' },
-          priority: 'Medium',
-          createdAt: new Date('2025-01-15T11:45:00'),
-        },
-        {
-          id: 'PKG-005',
-          trackingNumber: 'ST2025005',
-          clientName: 'Electronics Pro',
-          recipientName: 'Nimal Jayawardena',
-          recipientAddress: '654 High Level Road, Maharagama',
-          weight: 4.5,
-          status: 'Ready for Dispatch',
-          location: { zone: 'B', shelf: '20', position: '5' },
-          priority: 'High',
-          createdAt: new Date('2025-01-15T12:00:00'),
-        },
-      ];
-
-      setPackages(mockPackages);
+      try {
+        // Fetch orders from WMS backend API
+        const orders = await apiCall(API_ENDPOINTS.ORDERS_READY_FOR_DISPATCH);
+        
+        // Transform WMS orders to frontend package format
+        const transformedPackages = orders.map(order => ({
+          id: `PKG-${order.id}`,
+          trackingNumber: order.clientRef || order.trackingNumber,
+          clientName: order.customerName,
+          recipientName: order.customerName,
+          recipientAddress: order.deliveryAddress,
+          weight: order.weight || 2.0,
+          status: order.status === 'RECEIVED' ? 'Ready for Dispatch' : 'Processing',
+          location: { zone: 'A', shelf: '12', position: '3' }, // Default location
+          priority: order.priority || 'Medium',
+          createdAt: new Date(order.createdAt),
+          orderId: order.id // Keep original order ID for driver assignment
+        }));
+        
+        setPackages(transformedPackages);
+      } catch (error) {
+        console.error('Error loading packages:', error);
+        // Fallback to mock data if API fails
+        setPackages([
+          {
+            id: 'PKG-001',
+            trackingNumber: 'ST2025001',
+            clientName: 'E-Mall Lanka',
+            recipientName: 'John Silva',
+            recipientAddress: '123 Galle Road, Colombo 03',
+            weight: 2.5,
+            status: 'Ready for Dispatch',
+            location: { zone: 'A', shelf: '12', position: '3' },
+            priority: 'High',
+            createdAt: new Date('2025-01-15T08:00:00'),
+          }
+        ]);
+      }
       setLoading(false);
     };
 

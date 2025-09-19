@@ -1,76 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Phone, Star, MapPin, Clock, ChevronRight } from 'lucide-react';
+import { Truck, Phone, Star, MapPin, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
+import { API_ENDPOINTS, apiCall } from '../config/api';
 
-const DriverAssignment = ({ selectedPackages, onDriverSelect }) => {
+const DriverAssignment = ({ selectedPackages, onDriverSelect, onBack }) => {
   const [drivers, setDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading drivers from API
+    // Load drivers from WMS backend API
     const loadDrivers = async () => {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const mockDrivers = [
-        {
-          id: 'DRV-001',
-          name: 'Kamal Perera',
-          licenseNumber: 'B1234567',
-          phoneNumber: '+94 77 123 4567',
-          vehicleType: 'Van',
-          status: 'Available',
+      try {
+        const driversData = await apiCall(API_ENDPOINTS.DRIVERS);
+        
+        // Transform backend driver data to frontend format
+        const transformedDrivers = driversData.map(driver => ({
+          id: `DRV-${driver.id.toString().padStart(3, '0')}`,
+          name: driver.name,
+          licenseNumber: driver.licenseNumber,
+          phoneNumber: driver.phoneNumber,
+          vehicleType: 'Van', // Default vehicle type
+          status: driver.available ? 'Available' : 'Busy',
           currentLocation: 'Warehouse',
-          deliveriesCompleted: 145,
-          rating: 4.8,
-        },
-        {
-          id: 'DRV-002',
-          name: 'Nimal Silva',
-          licenseNumber: 'B2345678',
-          phoneNumber: '+94 71 234 5678',
-          vehicleType: 'Motorcycle',
-          status: 'Available',
-          currentLocation: 'Colombo 07',
-          deliveriesCompleted: 89,
-          rating: 4.6,
-        },
-        {
-          id: 'DRV-003',
-          name: 'Sunil Fernando',
-          licenseNumber: 'B3456789',
-          phoneNumber: '+94 76 345 6789',
-          vehicleType: 'Truck',
-          status: 'Busy',
-          currentLocation: 'Kandy Route',
-          deliveriesCompleted: 203,
-          rating: 4.9,
-        },
-        {
-          id: 'DRV-004',
-          name: 'Chaminda Rajapakse',
-          licenseNumber: 'B4567890',
-          phoneNumber: '+94 78 456 7890',
-          vehicleType: 'Van',
-          status: 'Available',
-          currentLocation: 'Warehouse',
-          deliveriesCompleted: 67,
-          rating: 4.4,
-        },
-        {
-          id: 'DRV-005',
-          name: 'Pradeep Mendis',
-          licenseNumber: 'B5678901',
-          phoneNumber: '+94 72 567 8901',
-          vehicleType: 'Motorcycle',
-          status: 'Busy',
-          currentLocation: 'Gampaha Route',
-          deliveriesCompleted: 134,
-          rating: 4.7,
-        },
-      ];
-      
-      setDrivers(mockDrivers);
+          deliveriesCompleted: Math.floor(Math.random() * 200) + 50, // Mock delivery count
+          rating: (4.0 + Math.random() * 1.0).toFixed(1),
+          driverId: driver.id // Keep original driver ID for assignment
+        }));
+        
+        setDrivers(transformedDrivers);
+      } catch (error) {
+        console.error('Error loading drivers:', error);
+        // Fallback to mock data if API fails
+        setDrivers([
+          {
+            id: 'DRV-001',
+            name: 'Kamal Perera',
+            licenseNumber: 'B1234567',
+            phoneNumber: '+94 77 123 4567',
+            vehicleType: 'Van',
+            status: 'Available',
+            currentLocation: 'Warehouse',
+            deliveriesCompleted: 145,
+            rating: 4.8,
+            driverId: 1
+          }
+        ]);
+      }
       setLoading(false);
     };
 
@@ -83,9 +59,27 @@ const DriverAssignment = ({ selectedPackages, onDriverSelect }) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedDriver) {
-      onDriverSelect(selectedDriver);
+      try {
+        // Assign driver to selected packages via API
+        const assignmentPromises = selectedPackages.map(async (pkg) => {
+          return apiCall(API_ENDPOINTS.ASSIGN_DRIVER(pkg.orderId), {
+            method: 'PUT',
+            body: JSON.stringify({
+              driverId: selectedDriver.driverId
+            })
+          });
+        });
+        
+        await Promise.all(assignmentPromises);
+        
+        // Call the parent component's handler
+        onDriverSelect(selectedDriver);
+      } catch (error) {
+        console.error('Error assigning driver:', error);
+        alert('Failed to assign driver. Please try again.');
+      }
     }
   };
 
@@ -252,9 +246,17 @@ const DriverAssignment = ({ selectedPackages, onDriverSelect }) => {
         </div>
       )}
 
-      {/* Submit Button */}
-      {selectedDriver && (
-        <div className="flex justify-end">
+      {/* Navigation Buttons */}
+      <div className="flex justify-between items-center">
+        <button
+          onClick={onBack}
+          className="flex items-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Back to Packages</span>
+        </button>
+        
+        {selectedDriver && (
           <button
             onClick={handleSubmit}
             className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -262,8 +264,8 @@ const DriverAssignment = ({ selectedPackages, onDriverSelect }) => {
             <span>Submit Order</span>
             <ChevronRight className="w-4 h-4" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

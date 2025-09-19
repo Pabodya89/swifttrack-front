@@ -1,7 +1,7 @@
 import React from 'react';
-import { Package, Truck, CheckCircle, BarChart3 } from 'lucide-react';
+import { Package, Truck, CheckCircle, BarChart3, List } from 'lucide-react';
 
-const Sidebar = ({ currentStep }) => {
+const Sidebar = ({ currentStep, onViewChange }) => {
   const menuItems = [
     {
       id: 'packages',
@@ -49,6 +49,17 @@ const Sidebar = ({ currentStep }) => {
             <span className="font-medium">{item.name}</span>
           </div>
         ))}
+        
+        {/* View All Orders Button */}
+        {onViewChange && (
+          <button
+            onClick={() => onViewChange('allOrders')}
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 mt-4"
+          >
+            <List className="w-5 h-5" />
+            <span className="font-medium">View All Orders</span>
+          </button>
+        )}
       </nav>
       
       <div className="p-6 border-t border-gray-200">
