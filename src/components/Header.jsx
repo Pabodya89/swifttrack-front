@@ -1,7 +1,7 @@
 import React from 'react';
-import { Bell, User, RefreshCw } from 'lucide-react';
+import { Bell, User, RefreshCw, ChevronLeft } from 'lucide-react';
 
-const Header = ({ currentStep, selectedCount, assignedDriver, onReset }) => {
+const Header = ({ currentStep, selectedCount, assignedDriver, onReset, onStepChange }) => {
   const getStepTitle = () => {
     switch (currentStep) {
       case 'packages':
@@ -49,6 +49,17 @@ const Header = ({ currentStep, selectedCount, assignedDriver, onReset }) => {
         </div>
         
         <div className="flex items-center space-x-4">
+          {/* Back button for driver assignment step */}
+          {currentStep === 'drivers' && onStepChange && (
+            <button
+              onClick={() => onStepChange('packages')}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          )}
+          
           {currentStep === 'status' && (
             <button
               onClick={onReset}
